@@ -24,5 +24,19 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-include_recipe 'chef_vault_users::users'
-include_recipe 'chef_vault_users::groups'
+ohai 'reload_passwd' do
+  action :nothing
+  plugin 'passwd'
+end
+
+node['chef_vault_users'].to_hash.fetch('groups') { {} }.each_pair do |groupname,attr|
+
+  group groupname do
+    gid attr.has_key?('gid') ? attr['gid'] : nil
+    system attr.has_key?('system') ? attr['system'] : false
+    append attr.has_key?('append') ? attr['append'] : false
+    action attr.has_key?('action') ? attr['action'].to_sym : :create
+    members attr.has_key?('members') ? attr['members'] : nil
+  end
+
+end
