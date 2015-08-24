@@ -1,8 +1,8 @@
 #
 # Cookbook Name:: chef_vault_users
-# Recipe:: default
+# Recipe:: users
 #
-# Copyright (C) 2014 Burberry, LTD
+# Copyright (C) 2014 zeroXten
 # 
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,14 +26,13 @@
 
 ohai 'reload_passwd' do
   action :nothing
-  plugin 'passwd'
+  plugin 'etc'
 end
 
-node['chef_vault_users'].to_hash.fetch('users') { {} }.each_pair do |username,attr|
 
-  password = nil
-  if attr.has_key?('password')
+node.users.each_pair do |username, attr|
 
+  if attr.has_key?('password') 
     chef_gem 'chef-vault'
     require 'chef-vault'
     chef_gem 'ruby-shadow'
@@ -42,27 +41,16 @@ node['chef_vault_users'].to_hash.fetch('users') { {} }.each_pair do |username,at
       when String
         password = attr['password']
       when TrueClass
-        password = ChefVault::Item('users', user)['password']
-      when Hash
-        password = ChefVault::Item(attr['password']['data_bag'], attr['password']['id'])['password']
-      when Array
-        password = ChefVault::Item(attr['password'][0], attr['password'][1])['password']
+        password = ChefVault::Item(node.chef_vault_users.databag, user)['password']
     end
 
     if attr.has_key?('password_is_plain') and attr['password_is_plain']
       chef_gem 'unix-crypt'
       require 'unix_crypt'
-      case node['chef_vault_users']['default_password_hash'].upcase
-        when 'DES'
-          password = UnixCrypt::DES.build(password)
-        when 'MD5'
-          password = UnixCrypt::MD5.build(password)
-        when 'SHA256'
-          password = UnixCrypt::SHA256.build(password)
-        else
-          password = UnixCrypt::SHA512.build(password)
-      end
+      password = UnixCrypt::SHA512.build(password)
     end
+  else
+    password = nil
   end
 
   user username do
@@ -78,14 +66,16 @@ node['chef_vault_users'].to_hash.fetch('users') { {} }.each_pair do |username,at
     notifies :reload, "ohai[reload_passwd]", :immediately
   end
 
-  directory "/home/#{username}/.ssh" do
+  directory "#{username} .ssh" do
+    path lazy { "#{node['etc']['passwd'][username]['home']}/.ssh" }
     owner username
     group username
     mode 0700
     only_if { attr.has_key?('ssh_keys') }
   end
 
-  file "/home/#{username}/.ssh/authorized_keys" do
+  file "#{username} authorized_keys" do
+    path lazy { "#{node['etc']['passwd'][username]['home']}/.ssh/authorized_keys" }
     owner username
     group username
     mode 0600

@@ -26,10 +26,11 @@
 
 ohai 'reload_passwd' do
   action :nothing
-  plugin 'passwd'
+  plugin 'etc'
 end
 
-node['chef_vault_users'].to_hash.fetch('groups') { {} }.each_pair do |groupname,attr|
+
+node.groups.each_pair do |groupname, attr|
 
   group groupname do
     gid attr.has_key?('gid') ? attr['gid'] : nil
