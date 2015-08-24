@@ -67,7 +67,7 @@ node.users.each_pair do |username, attr|
   end
 
   directory "#{username} .ssh" do
-    path lazy { "#{node['etc']['passwd'][username]['home']}/.ssh" }
+    path lazy { "#{node['etc']['passwd'][username]['dir']}/.ssh" }
     owner username
     group username
     mode 0700
@@ -75,7 +75,7 @@ node.users.each_pair do |username, attr|
   end
 
   file "#{username} authorized_keys" do
-    path lazy { "#{node['etc']['passwd'][username]['home']}/.ssh/authorized_keys" }
+    path lazy { "#{node['etc']['passwd'][username]['dir']}/.ssh/authorized_keys" }
     owner username
     group username
     mode 0600
