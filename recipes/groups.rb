@@ -34,8 +34,8 @@ node.groups.each_pair do |groupname, attr|
 
   group groupname do
     gid attr.has_key?('gid') ? attr['gid'] : nil
-    system attr.has_key?('system') ? attr['system'] : false
-    append attr.has_key?('append') ? attr['append'] : false
+    system attr.has_key?('system') ? attr['system'] : nil
+    append attr.has_key?('append') ? attr['append'] : nil
     action attr.has_key?('action') ? attr['action'].to_sym : :create
     members attr.has_key?('members') ? attr['members'] : nil
   end
