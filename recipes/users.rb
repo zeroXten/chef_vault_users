@@ -29,10 +29,12 @@ ohai 'reload_passwd' do
   plugin 'etc'
 end
 
-
 node.users.each_pair do |username, attr|
 
-  if attr.has_key?('password') 
+  user_action = attr.has_key?('action') ? attr['action'].to_sym : :nothing
+  user_is_active = [:create, :manage, :modify, :unlock].include?(user_action)
+
+  if user_is_active and attr.has_key?('password') 
     chef_gem 'chef-vault'
     require 'chef-vault'
     chef_gem 'ruby-shadow'
@@ -60,27 +62,42 @@ node.users.each_pair do |username, attr|
     home attr.has_key?('home') ? attr['home'] : "/home/#{username}"
     shell attr.has_key?('shell') ? attr['shell'] : node['chef_vault_users']['default_shell']
     system attr.has_key?('system') ? attr['system'] : false
-    action attr.has_key?('action') ? attr['action'].to_sym : :create
+    action user_action
     password password
     supports :manage_home => (attr.has_key?('manage_home') ? attr['manage_home'] : true)
     notifies :reload, "ohai[reload_passwd]", :immediately
   end
 
-  directory "#{username} .ssh" do
-    path lazy { "#{node['etc']['passwd'][username]['dir']}/.ssh" }
+  directory "create #{username} .ssh" do
+    path "/home/#{username}/.ssh"
     owner username
     group username
     mode 0700
-    only_if { attr.has_key?('ssh_keys') }
+    action :create
+    only_if { user_is_active and attr.has_key?('ssh_keys') }
   end
-
-  file "#{username} authorized_keys" do
-    path lazy { "#{node['etc']['passwd'][username]['dir']}/.ssh/authorized_keys" }
+  
+  file "create #{username} authorized_keys" do
+    path "/home/#{username}/.ssh/authorized_keys"
     owner username
     group username
     mode 0600
+    action :create
     content [attr['ssh_keys']].flatten.join("\n") 
-    only_if { attr.has_key?('ssh_keys') }
+    only_if { user_is_active and attr.has_key?('ssh_keys') }
+  end
+
+  file "create #{username} authorized_keys" do
+    path "/home/#{username}/.ssh/authorized_keys"
+    action :delete
+    not_if { user_is_active }
+  end
+
+  directory "delete #{username}" do
+    path "/home/#{username}"
+    action :delete
+    recursive true
+    only_if { user_action == :remove }
   end
 
 end
