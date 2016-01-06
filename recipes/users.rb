@@ -46,7 +46,7 @@ node.users.each_pair do |username, attr|
           chef_gem 'chef-vault'
           require 'chef-vault'
           chef_gem 'ruby-shadow'
-          password = ChefVault::Item(node.chef_vault_users.databag, username)['password']
+          password = ChefVault::Item.load(node.chef_vault_users.databag, username)['password']
         end
     end
 
