@@ -35,15 +35,19 @@ node.users.each_pair do |username, attr|
   user_is_active = [:create, :manage, :modify, :unlock].include?(user_action)
 
   if user_is_active and attr.has_key?('password') 
-    chef_gem 'chef-vault'
-    require 'chef-vault'
-    chef_gem 'ruby-shadow'
 
     case attr['password']
       when String
         password = attr['password']
       when TrueClass
-        password = ChefVault::Item(node.chef_vault_users.databag, user)['password']
+        if Chef::Config[:solo]
+          password = 'dummy_solo_password'
+        else
+          chef_gem 'chef-vault'
+          require 'chef-vault'
+          chef_gem 'ruby-shadow'
+          password = ChefVault::Item(node.chef_vault_users.databag, user)['password']
+        end
     end
 
     if attr.has_key?('password_is_plain') and attr['password_is_plain']
